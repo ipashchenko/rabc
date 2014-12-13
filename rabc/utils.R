@@ -1,3 +1,8 @@
+library(gdata)
+setwd("~/rabc/rabc")
+col.names <- c('bsls', 's_thrs', 'status')
+bsls_sthr_status = read.table('data.txt', col.names=col.names)
+
 model <- function(x){
   
 }
