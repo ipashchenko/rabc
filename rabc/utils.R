@@ -1,8 +1,8 @@
 library(gdata)
-setwd("~/rabc/rabc")
 col.names <- c('bsls', 's_thrs', 'status')
 bsls_sthr_status = read.table('data.txt', col.names=col.names)
 
+# Model that given parameters vector ``x`` returns vector of summary statistic
 model <- function(x){
   
 }
@@ -16,3 +16,4 @@ det_fractions_in_bsl_ranges <- function(bsls_sthr_status, borders){
   }
   return(fractions)
 }
+
