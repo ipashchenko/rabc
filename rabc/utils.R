@@ -60,13 +60,27 @@ model1<-function(x){
 ###################################################################
 ####################EasyABC########################################
 ###################################################################
-
+library("EasyABC")
+library("abc")
 # Define priors
 prior1=list(c("unif", -3, 1), c("unif", 0, 5), c("unif", 26, 32), c("unif", 0, 7.5))
 # Data summary statistics
 sum_stat_obs=c(0.68085106, 0.43043478, 0.20297030, 0.09770115)
-tolerance=0.5
-n=100
 set.seed(1)
-ABC_rej<-ABC_rejection(model=model1, prior=prior1, nb_simul=n,
-                       summary_stat_target=sum_stat_obs, tol=tolerance)
+
+# Doing rejection sampling
+ABC_rej<-ABC_rejection(model=model1, prior=prior1, nb_simul=100000,
+                       summary_stat_target=sum_stat_obs, tol=0.005)
+
+abc_out<-abc(sum_stat_obs, ABC_rej$param, ABC_rej$stats, tol=0.5,
+             method="loclinear")
+# Plot results
+hist(abc_out$adj.values[, 1], plot="True")
+hist(ABC_rej$param[, 3], plot="True", main="Histogram of log(Tb)", xlab="log(Tb)", ylab="P(log(Tb) | data)", freq=FALSE)
+hist(abc_out$adj.values[, 3], plot="True", main="Histogram of log(Tb)", xlab="log(Tb)", ylab="P(log(Tb) | data)", freq=FALSE)
+
+# Doing PMC sampling
+ABC_seq<-ABC_sequential(method="Drovandi", model=model1, prior=prior1, nb_simul=200,
+                        summary_stat_target=sum_stat_obs, tolerance_tab=0.01)
+abc_seq_out<-abc(sum_stat_obs, ABC_seq$param, ABC_seq$stats, tol=0.5,
+                 method="loclinear")
