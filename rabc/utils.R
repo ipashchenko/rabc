@@ -71,13 +71,43 @@ model1<-function(x){
 }
 
 
+# function must accept vector of model parameters and return summary statistics
+# x - vector of parameters of population distribution:
+# (mu_logv0, std_logv0, mu_logtb, std_logtb, beta_e)
+# example
+# x<-c(-0.43, 0.94, 28.8, 2.1, 5.)
+model2<-function(x){
+  fractions <- vector(length=length(borders)-1)
+  for (i in seq(1, length(borders)-1)) {
+    subdata<-subset(data, bl>borders[i] & bl<borders[i+1])
+    # Size of sample in current baseline bin
+    size<-length(subdata$bl)
+    # Generate sample of sources
+    mu_logv0<-x[1]
+    std_logv0<-x[2]
+    mu_logtb<-x[3]
+    std_logtb<-x[4]
+    beta_e<-x[5]
+    logv0 = rnorm(size, mu_logv0, std_logv0)
+    logtb = rnorm(size, mu_logtb, std_logtb)
+    e = rbeta(size, 5, beta_e)
+    dfi = runif(size, 0, pi/2)
+    fluxes<-flux_ell(cbind(subdata$bl, exp(logv0), exp(logtb), e, dfi))
+    # Count detections
+    detections<-subset(subdata, fluxes>5.*subdata$s_thr)
+    fractions[i]<-as.double(length(detections$bl))/size
+  }
+  return(fractions)
+}
+
+
 ###################################################################
 ####################EasyABC########################################
 ###################################################################
 library("EasyABC")
 library("abc")
 # Define priors
-prior1=list(c("normal", -0.94, 0.3), c("unif", 0., 5.), c("unif", 26, 32), c("unif", 0, 7.5))
+prior1=list(c("normal", -0.94, 0.3), c("unif", 0., 5.), c("unif", 26, 32), c("unif", 0, 7.5), c("unif", 1, 20))
 # Data summary statistics
 sum_stat_obs=c(0.68085106, 0.43043478, 0.20297030, 0.09770115, 0.02116402)
 set.seed(1)
