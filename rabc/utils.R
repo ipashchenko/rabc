@@ -5,10 +5,10 @@ data = read.table('data_to_R.txt', col.names=col.names)
 
 borders <- c(2., 5., 10., 15., 20., 30.)
 
-det_fractions_in_bsl_ranges <- function(data, borders){
+det_fractions_in_bsl_ranges <- function(some_data, borders){
   fractions <- vector(length=length(borders)-1)
   for (i in seq(1, length(borders)-1)) {
-    statuses<-subset(data, bl>borders[i] & bl<borders[i+1], status)
+    statuses<-subset(some_data, bl>borders[i] & bl<borders[i+1], status)
     y<-subset(statuses, statuses == 'y')
     print(y)
     fractions[i] <- as.double(length(y$status))/length(statuses$status)
@@ -197,43 +197,48 @@ abc_seq_out<-abc(sum_stat_obs, ABC_seq$param, ABC_seq$stats, tol=0.5,
 ###########Simulate survey#########################################
 ###################################################################
 
-# First, give "TRUE" parameters of population
-mu_logv0 = -0.8
-std_logv0 = 0.3
-mu_logtb = 29.0
-std_logtb = 0.7
-alpha_e = 33
-beta_e = 50.
+create_survey<-function(some_data, mu_logv0=-0.4, std_logv0=0.3, mu_logtb=29.0, std_logtb=0.7, alpha_e=33, beta_e=50) {
 
-# Create ``n_s`` sources from population
-n_s = length(unique(data$source))
-sources = levels(data$sources)
-set.seed(1)
-logv0 = rnorm(n_s, mu_logv0, std_logv0)
-logtb = rnorm(n_s, mu_logtb, std_logtb)
-e = rbeta(n_s, alpha_e, beta_e)
+  set.seed(1)
+  # Number of observations in survey
+  n_obs = length(some_data$bl)
+  # Create ``n_s`` sources from population
+  n_s = length(unique(some_data$source))
+  sources = levels(some_data$source)
+  logv0 = rnorm(n_s, mu_logv0, std_logv0)
+  logtb = rnorm(n_s, mu_logtb, std_logtb)
+  e = rbeta(n_s, alpha_e, beta_e)
 
-# Create container for new data
-new_data<-data
-# Filling new_data with params
-new_data$angles <- vector(length=length(new_data$bl))
-new_data$logv0 <- vector(length=length(new_data$bl))
-new_data$logtb <- vector(length=length(new_data$bl))
-new_data$e <- vector(length=length(new_data$bl))
-for (i in seq(along=sources)) {
-  indxs<-which(new_data$source==sources[i])
-  for (j in seq(along=indxs)) {
-    new_data$e[indxs[j]]<-e[i]
-    new_data$logv0[indxs[j]]<-logv0[i]
-    new_data$logtb[indxs[j]]<-logtb[i]
-    new_data$angles[indxs[j]]<-runif(1, 0, pi/2)
+  # Create container for new data
+  new_data<-some_data
+  # Create new entries
+  # TODO: Do i need this?
+  new_data$angles <- vector(length=length(n_obs))
+  new_data$logv0 <- vector(length=length(n_obs))
+  new_data$logtb <- vector(length=length(n_obs))
+  new_data$e <- vector(length=length(n_obs))
+  new_data$fluxes <- vector(length=length(n_obs))
+  # Filling new_data with params
+  for (i in seq(along=sources)) {
+    indxs<-which(new_data$source==sources[i])
+    for (j in seq(along=indxs)) {
+      new_data$e[indxs[j]]<-e[i]
+      new_data$logv0[indxs[j]]<-logv0[i]
+      new_data$logtb[indxs[j]]<-logtb[i]
+      new_data$angles[indxs[j]]<-runif(1, 0, pi/2)
+    }
   }
+
+  # Calculate observed fluxes for sample
+  new_data$fluxes<-flux_ell(cbind(new_data$bl, exp(new_data$logv0), exp(new_data$logtb), new_data$e, new_data$angles))
+  # Update statuses
+  new_data$status[new_data$fluxes > 5*new_data$s_thr] = 'y'
+  new_data$status[new_data$fluxes < 5*new_data$s_thr] = 'n'
+
+  return(new_data)
 }
 
 
-
-
-fluxes<-flux_ell(cbind(subdata$bl, exp(logv0), exp(logtb), e, dfi))
 # Count detections
 detections<-subset(subdata, fluxes>5.*subdata$s_thr)
 fractions[i]<-as.double(length(detections$bl))/size
