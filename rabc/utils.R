@@ -220,11 +220,8 @@ new_data$angles <- vector(length=length(new_data$bl))
 new_data$logv0 <- vector(length=length(new_data$bl))
 new_data$logtb <- vector(length=length(new_data$bl))
 new_data$e <- vector(length=length(new_data$bl))
-s=0
 for (i in seq(along=sources)) {
-  indxs<-which(new_data$source==new_data$source[i])
-  s<-s+length(indxs)
-  
+  indxs<-which(new_data$source==sources[i])
   for (j in seq(along=indxs)) {
     new_data$e[indxs[j]]<-e[i]
     new_data$logv0[indxs[j]]<-logv0[i]
