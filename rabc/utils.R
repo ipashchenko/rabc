@@ -100,6 +100,37 @@ model2<-function(x){
   return(fractions)
 }
 
+# TODO: Implement model with each single source having the same parameters
+# even if it is observed on different baselines
+# function must accept vector of model parameters and return summary statistics
+# x - vector of parameters of population distribution:
+# (mu_logv0, std_logv0, mu_logtb, std_logtb, beta_e)
+# example
+# x<-c(-0.43, 0.94, 28.8, 2.1, 5.)
+model3<-function(x){
+  fractions <- vector(length=length(borders)-1)
+  for (i in seq(1, length(borders)-1)) {
+    subdata<-subset(data, bl>borders[i] & bl<borders[i+1])
+    # Size of sample in current baseline bin
+    size<-length(subdata$bl)
+    # Generate sample of sources
+    mu_logv0<-x[1]
+    std_logv0<-x[2]
+    mu_logtb<-x[3]
+    std_logtb<-x[4]
+    beta_e<-x[5]
+    logv0 = rnorm(size, mu_logv0, std_logv0)
+    logtb = rnorm(size, mu_logtb, std_logtb)
+    e = rbeta(size, 5, beta_e)
+    dfi = runif(size, 0, pi/2)
+    fluxes<-flux_ell(cbind(subdata$bl, exp(logv0), exp(logtb), e, dfi))
+    # Count detections
+    detections<-subset(subdata, fluxes>5.*subdata$s_thr)
+    fractions[i]<-as.double(length(detections$bl))/size
+  }
+  return(fractions)
+}
+
 
 ###################################################################
 ####################EasyABC########################################
@@ -107,7 +138,8 @@ model2<-function(x){
 library("EasyABC")
 library("abc")
 # Define priors
-prior1=list(c("normal", -0.94, 0.3), c("unif", 0., 5.), c("unif", 26, 32), c("unif", 0, 7.5), c("unif", 1, 20))
+prior1=list(c("normal", -0.43, 0.15), c("lognormal", -0.1, 0.15), c("unif", 26, 32), c("unif", 0, 7.5))
+prior2=list(c("normal", -0.43, 0.15), c("lognormal", -0.1, 0.15), c("unif", 26, 32), c("unif", 0, 7.5), c("unif", 1, 30))
 # Data summary statistics
 sum_stat_obs=c(0.68085106, 0.43043478, 0.20297030, 0.09770115, 0.02116402)
 set.seed(1)
@@ -118,13 +150,29 @@ ABC_rej<-ABC_rejection(model=model1, prior=prior1, nb_simul=100000,
 
 abc_out<-abc(sum_stat_obs, ABC_rej$param, ABC_rej$stats, tol=0.5,
              method="loclinear")
+
 # Plot results
 hist(abc_out$adj.values[, 1], plot="True")
 hist(ABC_rej$param[, 3], plot="True", main="Histogram of log(Tb)", xlab="log(Tb)", ylab="P(log(Tb) | data)", freq=FALSE)
 hist(abc_out$adj.values[, 3], plot="True", main="Histogram of log(Tb)", xlab="log(Tb)", ylab="P(log(Tb) | data)", freq=FALSE)
+hist(ABC_rej$param[, 5], plot="True", main="Histogram of e", xlab="e", ylab="P(e | data)", freq=FALSE)
+hist(abc_out$adj.values[, 5], plot="True", main="Histogram of e", xlab="e", ylab="P(e | data)", freq=FALSE)
 
 # Doing PMC sampling
-ABC_seq<-ABC_sequential(method="Drovandi", model=model1, prior=prior1, nb_simul=200,
-                        summary_stat_target=sum_stat_obs, tolerance_tab=0.01)
+# This setup results in 400s of computations
+ABC_seq<-ABC_sequential(method="Drovandi", model=model2, prior=prior2, nb_simul=20,
+                        summary_stat_target=sum_stat_obs, tolerance_tab=0.02)
 abc_seq_out<-abc(sum_stat_obs, ABC_seq$param, ABC_seq$stats, tol=0.5,
                  method="loclinear")
+
+###################################################################
+###########Simulate survey#########################################
+###################################################################
+
+# First, give "TRUE" parameters of population
+mu_logv0 = -0.8
+std_logv0 = 0.3
+mu_logtb = 29.0
+std_logtb = 0.7
+beta = 10.
+# Create ``n_s`` sources from population
