@@ -159,7 +159,6 @@ model3<-function(x){
     tb <- vector(length=n_obs_in_bin)
     e <- vector(length=n_obs_in_bin)
     for (j in seq(1, n_obs_in_bin)) {
-      print(sources_in_bin[j])
       v0[j] = exp(sources_params$logv0[sources_params$source == sources_in_bin[j]])
       tb[j] = exp(sources_params$logtb[sources_params$source == sources_in_bin[j]])
       e[j] = sources_params$e[sources_params$source == sources_in_bin[j]]
