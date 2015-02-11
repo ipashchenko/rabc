@@ -100,7 +100,7 @@ model2<-function(x){
   return(fractions)
 }
 
-# as model2 but for multicore
+# as model2 but for multiple cores
 model2m<-function(x){
   set.seed(x[1])
   fractions <- vector(length=length(borders)-1)
@@ -135,21 +135,37 @@ model2m<-function(x){
 # x<-c(-0.43, 0.94, 28.8, 2.1, 5.)
 model3<-function(x){
   fractions <- vector(length=length(borders)-1)
+  # Create ``n_s`` sources from population
+  n_s = length(unique(data$source))
+  sources = levels(data$source)
+  mu_logv0<-x[1]
+  std_logv0<-x[2]
+  mu_logtb<-x[3]
+  std_logtb<-x[4]
+  beta_e<-x[5]
+  logv0 = rnorm(n_s, mu_logv0, std_logv0)
+  logtb = rnorm(n_s, mu_logtb, std_logtb)
+  e = rbeta(n_s, 5, beta_e)
+  sources_params <- data.frame(source=sources, logv0=logv0, logtb=logtb, e=e)
+  
   for (i in seq(1, length(borders)-1)) {
     subdata<-subset(data, bl>borders[i] & bl<borders[i+1])
     # Size of sample in current baseline bin
-    size<-length(subdata$bl)
-    # Generate sample of sources
-    mu_logv0<-x[1]
-    std_logv0<-x[2]
-    mu_logtb<-x[3]
-    std_logtb<-x[4]
-    beta_e<-x[5]
-    logv0 = rnorm(size, mu_logv0, std_logv0)
-    logtb = rnorm(size, mu_logtb, std_logtb)
-    e = rbeta(size, 5, beta_e)
-    dfi = runif(size, 0, pi/2)
-    fluxes<-flux_ell(cbind(subdata$bl, exp(logv0), exp(logtb), e, dfi))
+    n_obs_in_bin <-length(subdata$bl)
+    dfi = runif(n_obs_in_bin, 0, pi/2)
+    # Sources in current baseline bins
+    sources_in_bin <- subdata$source
+    v0 <- vector(length=n_obs_in_bin)
+    tb <- vector(length=n_obs_in_bin)
+    e <- vector(length=n_obs_in_bin)
+    for (j in seq(1, n_obs_in_bin)) {
+      print(sources_in_bin[j])
+      v0[j] = exp(sources_params$logv0[sources_params$source == sources_in_bin[j]])
+      tb[j] = exp(sources_params$logtb[sources_params$source == sources_in_bin[j]])
+      e[j] = sources_params$e[sources_params$source == sources_in_bin[j]]
+    }
+    
+    fluxes<-flux_ell(cbind(subdata$bl, v0, tb, e, dfi))
     # Count detections
     detections<-subset(subdata, fluxes>5.*subdata$s_thr)
     fractions[i]<-as.double(length(detections$bl))/size
