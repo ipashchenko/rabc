@@ -167,7 +167,7 @@ model3<-function(x){
     fluxes<-flux_ell(cbind(subdata$bl, v0, tb, e, dfi))
     # Count detections
     detections<-subset(subdata, fluxes>5.*subdata$s_thr)
-    fractions[i]<-as.double(length(detections$bl))/size
+    fractions[i]<-as.double(length(detections$bl))/n_obs_in_bin
   }
   return(fractions)
 }
