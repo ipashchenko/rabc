@@ -2,6 +2,11 @@ library(gdata)
 col.names <- c('source', 'bl', 's_thr', 'status')
 setwd("/home/ilya/code/rabc/rabc")
 data = read.table('data_to_R.txt', col.names=col.names)
+# Read & Write objects example
+# On odin
+# saveRDS(ABC_rej3, 'ABC_rej3.rds')
+# on calculon
+# ABC_rej3 <- readRDS("ABC_rej3.rds")
 
 borders <- c(2., 5., 10., 15., 20., 30.)
 
@@ -188,8 +193,9 @@ sum_stat_obs=c(0.68085106, 0.43043478, 0.20297030, 0.09770115, 0.02116402)
 set.seed(1)
 
 # Doing rejection sampling
-ABC_rej<-ABC_rejection(model=model1, prior=prior1, nb_simul=100000,
-                       summary_stat_target=sum_stat_obs, tol=0.005)
+ABC_rej<-ABC_rejection(model=model1, prior=prior1, nb_simul=50000,
+                       summary_stat_target=sum_stat_obs, tol=0.05,
+                       progress_bar=TRUE)
 
 abc_out<-abc(sum_stat_obs, ABC_rej$param, ABC_rej$stats, tol=0.5,
              method="loclinear")
