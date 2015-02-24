@@ -134,6 +134,7 @@ model2m<-function(x){
 # example
 # x<-c(-0.43, 0.94, 28.8, 2.1, 5.)
 model3<-function(x){
+  # set seed for the same P(x) if x is the same
   fractions <- vector(length=length(borders)-1)
   # Create ``n_s`` sources from population
   n_s = length(unique(data$source))
@@ -149,6 +150,7 @@ model3<-function(x){
   sources_params <- data.frame(source=sources, logv0=logv0, logtb=logtb, e=e)
   
   for (i in seq(1, length(borders)-1)) {
+    # set seed for the same angles
     subdata<-subset(data, bl>borders[i] & bl<borders[i+1])
     # Size of sample in current baseline bin
     n_obs_in_bin <-length(subdata$bl)
@@ -257,3 +259,35 @@ create_survey<-function(some_data, mu_logv0=-0.4, std_logv0=0.3, mu_logtb=29.0, 
 # Count detections
 detections<-subset(subdata, fluxes>5.*subdata$s_thr)
 fractions[i]<-as.double(length(detections$bl))/size
+
+# Simulate from logit model
+simulate.from.logr <- function(somedata, coefs) {
+  require(faraway) # For accessible logit and inv-logit functions
+  n = length(somedata$status)
+  linear.part = coefs[1] + data$b * coefs[2] + data$d * coefs[3]
+  probs = ilogit(linear.part)
+  y = rbinom(n, size=1, prob=probs)
+  return(y)
+}
+
+# Simulate from logistic fitted model and re-fit both logistic and GAM
+delta.deviance.sim <- function(somedata, logistic.model) {
+  y.new = simulate.from.logr(somedata, logistic.model$coefficients)
+  GLM.dev = glm(y.new ~ b + d, data=somedata, family="binomial")$deviance
+  GAM.dev = gam(y.new ~ lo(b) + lo(d), data=somedata, family="binomial")$deviance
+  return(GLM.dev - GAM.dev)
+}
+
+#plot adj
+plot(ABC_rej3$param[,3], sqrt(rowSums((ABC_rej3$stats )**2)), xlab="log(Tb)", ylab="S")
+lf <- locfit(sqrt(rowSums((ABC_rej3$stats )**2))  ~  ABC_rej3$param[,3])
+plot(lf, c(27,29.5), add=TRUE, lwd=5)
+lvl <- sqrt(sum(sum_stat_obs**2))
+lines(c(26, 30), c(lvl, lvl), lty=3)
+lines(c(26, 30), c(lvl+0.1, lvl+0.1))
+lines(c(26, 30), c(lvl-0.1, lvl-0.1))
+
+# Save data to txt
+write.table(ABC_rej3$param, "abc3_all.txt", sep="\t")
+write.table(ABC_rej2$param, "abc2_all.txt", sep="\t")
+write.table(ABC_rej1$param, "abc1_all.txt", sep="\t")
