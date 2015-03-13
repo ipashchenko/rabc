@@ -8,7 +8,16 @@ data = read.table('data_to_R.txt', col.names=col.names)
 # on calculon
 # ABC_rej3 <- readRDS("ABC_rej3.rds")
 
-borders <- c(2., 5., 10., 15., 20., 30.)
+# TODO: calculate fractions for different number of bins
+fractions_in_bins <- function(some_data, n_bins) {
+  borders <- vector(length=n_bins+1)
+  d = (max(some_data$bl) - min(some_data$bl)) / n_bins
+  for (i in seq(1, n_bins+1)) {
+    borders[i] <- min(some_data$bl)+(i-1)*d
+  }
+  return(borders)
+}
+
 
 det_fractions_in_bsl_ranges <- function(some_data, borders){
   fractions <- vector(length=length(borders)-1)
@@ -246,31 +255,48 @@ distances_k <- function(sample, k) {
 # Calculate entropy of sample
 entropy <- function(sample, n_par, k=4) {
   # vector of k-th nearest neighbors for sample
-  distances <- distances_k(sample, k) 
+  distances <- distances_k(sample, k)
+  n <- length(sample)
   return(log(pi**(n_par/2)/gamma(n_par/2+1)) - digamma(k) + log(dim(sample)[1] + (n_par/n)* sum(log(distances))))
 }
 
 # Select number of bins used for summary statistics
 # for each n_bins_max=10 make n=5 rejection ABC samplings
-find_n_bins <- function(n_bins_max=7, n=5) {
+# some_data here is data$bl
+find_n_bins <- function(some_data, n_bins_max=7, n=5) {
   means_entropy_all = vector(length=n_bins_max)
   std_entropy_all = vector(length=n_bins_max)
-  for (i in seq(1, n_bin_max)) {
+  for (i in seq(1, n_bins_max)) {
     entropy_one = vector(length=n)
+    # Claclulate data summary statistics
+    borders <<- fractions_in_bins(some_data, i)
+    sum_stat_observed <- det_fractions_in_bsl_ranges(some_data, borders)
+    print("Using number of bins: ")
+    print(i)
+    print("Using borders: ")
+    print(borders)
+    print("Using summary statistics: ")
+    print(sum_stat_observed)
     for (j in seq(1, n)) {
+      print("Inside inner cycle, borders :")
+      print(borders)
+      print(c("Using", i, "number of bins", j, "time"))
       ABC_rej<-ABC_rejection(model=model2, prior=prior2, nb_simul=5000,
-                             summary_stat_target=sum_stat_obs, tol=0.04,
+                             summary_stat_target=sum_stat_observed, tol=0.04,
                              progress_bar=TRUE)
-      abc_out<-abc(sum_stat_obs, ABC_rej$param, ABC_rej$stats, tol=0.5,
-                   method="loclinear")
-      entropy_one[j]+=entropy(abc_out$adj.values, k=4)
+      print("summary statistic from sample")
+      print(ABC_rej$stats)
+      print(length(sum_stat_observed))
+      print(dim(ABC_rej$stats[2]))
+      abc_out<-abc(sum_stat_observed, ABC_rej$param, ABC_rej$stats, tol=0.5, method="loclinear")
+      entropy_one[j] = entropy_one[j] + entropy(abc_out$adj.values, 5, k=4)
     }
     means_entropy_all[i]=mean(entropy_one)
-    std_entropy_all[i]=std(entropy_one)
+    std_entropy_all[i]=sd(entropy_one)
   }
-  return means_entropy_all, std_entropy_all
+  return(c(means_entropy_all, std_entropy_all))
 }
-  
+ 
 ###################################################################
 ###########Simulate survey#########################################
 ###################################################################
