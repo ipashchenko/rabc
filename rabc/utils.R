@@ -216,10 +216,18 @@ ABC_seq<-ABC_sequential(method="Drovandi", model=model2m, prior=prior2, nb_simul
 abc_seq_out<-abc(sum_stat_obs, ABC_seq$param, ABC_seq$stats, tol=0.5,
                  method="loclinear")
 
+myfunc <- function(x, i) {
+  return((x[,i] - mean(x[,i])) / sd(x[,i]))
+}
 
+# TODO: Add standardisation based on variances of priors.
 distances_k <- function(sample, k) {
   # Now msample[1,] - first element of sample
   msample <- matrix(sample, nrow=dim(sample)[1], ncol=dim(sample)[2])
+  # Standardise 
+  for (col in seq(1, ncol(msample))) {
+    msample[,col]<-(msample[,col]-mean(msample[,col]))/sd(msample[,col])
+  }
   distances <- vector(length = dim(sample)[1])
   for (i in seq(1, dim(sample)[1])) {
     element <- msample[i,]
@@ -238,8 +246,8 @@ distances_k <- function(sample, k) {
 # Calculate entropy of sample
 entropy <- function(sample, n_par, k=4) {
   # vector of k-th nearest neighbors for sample
-  r_k = 
-  return(log(pi**(n_par/2)/gamma(n_par/2+1)) - digamma(k) + log(length(sample) + (n_par/n)* sum(log(r_k))))
+  distances <- distances_k(sample, k) 
+  return(log(pi**(n_par/2)/gamma(n_par/2+1)) - digamma(k) + log(dim(sample)[1] + (n_par/n)* sum(log(distances))))
 }
 
 # Select number of bins used for summary statistics
