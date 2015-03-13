@@ -216,6 +216,34 @@ ABC_seq<-ABC_sequential(method="Drovandi", model=model2m, prior=prior2, nb_simul
 abc_seq_out<-abc(sum_stat_obs, ABC_seq$param, ABC_seq$stats, tol=0.5,
                  method="loclinear")
 
+# Calculate entropy of sample
+entropy <- function(sample, n_par, k=4) {
+  # vector of k-th nearest neighbors for sample
+  r_k = 
+  return log(pi**(n_par/2)/gamma(n_par/2+1)) - digamma(k) + log(length(sample) + (n_par/n)* sum(log(r_k)))
+}
+
+# Select number of bins used for summary statistics
+# for each n_bins_max=10 make n=5 rejection ABC samplings
+find_n_bins <- function(n_bins_max=7, n=5) {
+  means_entropy_all = vector(length=n_bins_max)
+  std_entropy_all = vector(length=n_bins_max)
+  for (i in seq(1, n_bin_max)) {
+    entropy_one = vector(length=n)
+    for (j in seq(1, n)) {
+      ABC_rej<-ABC_rejection(model=model2, prior=prior2, nb_simul=5000,
+                             summary_stat_target=sum_stat_obs, tol=0.04,
+                             progress_bar=TRUE)
+      abc_out<-abc(sum_stat_obs, ABC_rej$param, ABC_rej$stats, tol=0.5,
+                   method="loclinear")
+      entropy_one[j]+=entropy(abc_out$adj.values, k=4)
+    }
+    means_entropy_all[i]=mean(entropy_one)
+    std_entropy_all[i]=std(entropy_one)
+  }
+  return means_entropy_all, std_entropy_all
+}
+  
 ###################################################################
 ###########Simulate survey#########################################
 ###################################################################
