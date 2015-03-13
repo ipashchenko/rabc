@@ -216,11 +216,30 @@ ABC_seq<-ABC_sequential(method="Drovandi", model=model2m, prior=prior2, nb_simul
 abc_seq_out<-abc(sum_stat_obs, ABC_seq$param, ABC_seq$stats, tol=0.5,
                  method="loclinear")
 
+
+distances_k <- function(sample, k) {
+  # Now msample[1,] - first element of sample
+  msample <- matrix(sample, nrow=dim(sample)[1], ncol=dim(sample)[2])
+  distances <- vector(length = dim(sample)[1])
+  for (i in seq(1, dim(sample)[1])) {
+    element <- msample[i,]
+    # Now melement[j,] - is i-th element for any j 
+    melement <- t(matrix(rep(element, dim(msample)[1]), nrow=dim(sample)[2], ncol=dim(sample)[1]))
+    diffs_sqrd <- apply(msample - melement, 2, function(x) x**2)
+    sums_diffs_sqrd <- apply(diffs_sqrd, 1, sum)
+    sqrt_sums_diffs_sqrd <- sqrt(sums_diffs_sqrd)
+    # indx <- which(sqrt_sums_diffs_sqrd == sort(sqrt_sums_diffs_sqrd)[k])
+    distances[i]<-sort(sqrt_sums_diffs_sqrd)[k] 
+  }
+  return(distances)
+}
+
+  
 # Calculate entropy of sample
 entropy <- function(sample, n_par, k=4) {
   # vector of k-th nearest neighbors for sample
   r_k = 
-  return log(pi**(n_par/2)/gamma(n_par/2+1)) - digamma(k) + log(length(sample) + (n_par/n)* sum(log(r_k)))
+  return(log(pi**(n_par/2)/gamma(n_par/2+1)) - digamma(k) + log(length(sample) + (n_par/n)* sum(log(r_k))))
 }
 
 # Select number of bins used for summary statistics
