@@ -24,7 +24,6 @@ det_fractions_in_bsl_ranges <- function(some_data, borders){
   for (i in seq(1, length(borders)-1)) {
     statuses<-subset(some_data, bl>borders[i] & bl<borders[i+1], status)
     y<-subset(statuses, statuses == 'y')
-    print(y)
     fractions[i] <- as.double(length(y$status))/length(statuses$status)
   }
   return(fractions)
@@ -256,8 +255,9 @@ distances_k <- function(sample, k) {
 entropy <- function(sample, n_par, k=4) {
   # vector of k-th nearest neighbors for sample
   distances <- distances_k(sample, k)
-  n <- length(sample)
-  return(log(pi**(n_par/2)/gamma(n_par/2+1)) - digamma(k) + log(dim(sample)[1] + (n_par/n)* sum(log(distances))))
+  n <- dim(sample)[1]
+  print(c("n", n))
+  return(log(pi**(n_par/2)/gamma(n_par/2+1)) - digamma(k) + log(n) + (n_par/n)* sum(log(distances)))
 }
 
 # Select number of bins used for summary statistics
