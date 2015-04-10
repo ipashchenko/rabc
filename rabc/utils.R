@@ -228,13 +228,20 @@ myfunc <- function(x, i) {
   return((x[,i] - mean(x[,i])) / sd(x[,i]))
 }
 
+# TODO: using [0,1] interval
 # TODO: Add standardisation based on variances of priors.
 distances_k <- function(sample, k) {
   # Now msample[1,] - first element of sample
   msample <- matrix(sample, nrow=dim(sample)[1], ncol=dim(sample)[2])
-  # Standardise 
+  # Standardize 
   for (col in seq(1, ncol(msample))) {
     msample[,col]<-(msample[,col]-mean(msample[,col]))/sd(msample[,col])
+  }
+  # Standardize a-la Ewan et al. 
+  # prior_std_list - list of std of priors for parameters
+  # (0.15, 0.15, 6./sqrt(12.), 7.5/sqrt(12.), 29./sqrt(12.))
+  for (col in seq(1, ncol(msample))) {
+    msample[,col]<-msample[,col]/prior_std_list[col]
   }
   distances <- vector(length = dim(sample)[1])
   for (i in seq(1, dim(sample)[1])) {
@@ -268,7 +275,7 @@ find_n_bins <- function(some_data, n_bins_max=7, n=5) {
   std_entropy_all = vector(length=n_bins_max)
   for (i in seq(1, n_bins_max)) {
     entropy_one = vector(length=n)
-    # Claclulate data summary statistics
+    # Calculate data summary statistics
     borders <<- fractions_in_bins(some_data, i)
     sum_stat_observed <- det_fractions_in_bsl_ranges(some_data, borders)
     print("Using number of bins: ")
@@ -282,14 +289,15 @@ find_n_bins <- function(some_data, n_bins_max=7, n=5) {
       print(borders)
       print(c("Using", i, "number of bins", j, "time"))
       ABC_rej<-ABC_rejection(model=model2, prior=prior2, nb_simul=5000,
-                             summary_stat_target=sum_stat_observed, tol=0.04,
+                             summary_stat_target=sum_stat_observed, tol=0.02,
                              progress_bar=TRUE)
       print("summary statistic from sample")
       print(ABC_rej$stats)
       print(length(sum_stat_observed))
       print(dim(ABC_rej$stats[2]))
-      abc_out<-abc(sum_stat_observed, ABC_rej$param, ABC_rej$stats, tol=0.5, method="loclinear")
-      entropy_one[j] = entropy_one[j] + entropy(abc_out$adj.values, 5, k=4)
+      #abc_out<-abc(sum_stat_observed, ABC_rej$param, ABC_rej$stats, tol=0.5, method="loclinear")
+      #entropy_one[j] = entropy_one[j] + entropy(abc_out$adj.values, 5, k=4)
+      entropy_one[j] = entropy_one[j] + entropy(ABC_rej$param, 5, k=4)
     }
     means_entropy_all[i]=mean(entropy_one)
     std_entropy_all[i]=sd(entropy_one)
