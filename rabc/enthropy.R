@@ -4,6 +4,7 @@ distances_k <- function(sample, k, standard=NULL, prior_std_list=NULL) {
   # Now msample[1,] - first element of sample
   msample <- matrix(sample, nrow=dim(sample)[1], ncol=dim(sample)[2])
   
+  # TODO: Use scale(msample, scale=as.vector(prior_std_list))
   # Standardize
   if (is.null(standard)) {
     for (col in seq(1, ncol(msample))) {
