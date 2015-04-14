@@ -79,15 +79,15 @@ find_n_bins_enthropy <- function(band, n_bins_max=7, n=10, path_to_data='/home/i
 # Function that first, using ME chosen S_ME (that is n_bins_ME) find n_obs = nb_simul * tol_ME / 2 parameter vectors
 # and generate n_obs new data sets from each parameter vector. Then for each number of bins (1 to n_bins_max) for each
 # data set it calculates RSSE and average them to MRSEE. Finally, it returns MRSEE for each number of bins
-find_n_bins_MRSSE <- function(band, n_bins_ME, nb_simul_ME=10000, tol_ME=0.02,
+find_n_bins_MRSSE <- function(band, n_bins_ME, nb_simul_ME=10000, tol_ME=0.05,
                               n_bins_max=10, path_to_data='/home/ilya/code/rabc/rabc/',
                               prior=list(c("normal", -0.43, 0.15),
                                          c("normal", 0.94, 0.15),
                                          c("unif", 7., 16.),
                                          c("unif", 0, 3.5),
                                          c("unif", 1, 30)),
-                              nb_simul_MRSSE=10000, tol_MRSSE=0.02,
-                              standard=TRUE, use_correction=FALSE) {
+                              nb_simul_MRSSE=5000, tol_MRSSE=0.04,
+                              standard=TRUE, use_correction=TRUE, n_obs=50) {
   # Vector to store MRSSE for each bin
   MRSSE_output <- vector(length=n_bins_max)
   
@@ -107,7 +107,8 @@ find_n_bins_MRSSE <- function(band, n_bins_ME, nb_simul_ME=10000, tol_ME=0.02,
   ABC_rej<-ABC_rejection(model=cur_model, prior=prior, nb_simul=nb_simul_ME,
                          summary_stat_target=sum_stat_observed, tol=tol_ME,
                          progress_bar=TRUE)
-  abc_out<-abc(sum_stat_observed, ABC_rej$param, ABC_rej$stats, tol=0.5, method="loclinear")
+  abc_out<-abc(sum_stat_observed, ABC_rej$param, ABC_rej$stats, tol=0.5,
+               method="neuralnet", numnet=50, sizenet=2)
   
   if (use_correction==FALSE) {
     sample = ABC_rej$param
@@ -115,6 +116,9 @@ find_n_bins_MRSSE <- function(band, n_bins_ME, nb_simul_ME=10000, tol_ME=0.02,
   else if (use_correction==TRUE) {
     sample = abc_out$adj.values
   }
+  
+  # Choose only n_obs number of parameter vectors from simulated data
+  sample <- sample[sample(nrow(sample),size=n_obs,replace=FALSE),]
   
   # For each number of bins (for each summary statistics S) - make ABC
   for (i in seq(1, n_bins_max)) {
@@ -136,7 +140,9 @@ find_n_bins_MRSSE <- function(band, n_bins_ME, nb_simul_ME=10000, tol_ME=0.02,
       ABC_rej_inner<-ABC_rejection(model=cur_model, prior=prior, nb_simul=nb_simul_MRSSE,
                                   summary_stat_target=sum_stat_observed, tol=tol_MRSSE,
                                   progress_bar=TRUE)
-      abc_out_inner<-abc(sum_stat_observed, ABC_rej_inner$param, ABC_rej_inner$stats, tol=0.5, method="loclinear")
+      abc_out_inner<-abc(sum_stat_observed, ABC_rej_inner$param,
+                         ABC_rej_inner$stats, tol=0.5, method="neuralnet",
+                         numnet=50, sizenet=2)
     
       # Make or not correction ##################
       if (use_correction==FALSE) {
