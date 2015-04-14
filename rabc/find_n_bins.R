@@ -86,7 +86,8 @@ find_n_bins_MRSSE <- function(band, n_bins_ME, nb_simul_ME=10000, tol_ME=0.02,
                                          c("unif", 7., 16.),
                                          c("unif", 0, 3.5),
                                          c("unif", 1, 30)),
-                              nb_simul_MRSSE=10000, tol_MRSSE=0.02, use_correction=FALSE) {
+                              nb_simul_MRSSE=10000, tol_MRSSE=0.02,
+                              standard=TRUE, use_correction=FALSE) {
   # Vector to store MRSSE for each bin
   MRSSE_output <- vector(length=n_bins_max)
   
@@ -108,10 +109,10 @@ find_n_bins_MRSSE <- function(band, n_bins_ME, nb_simul_ME=10000, tol_ME=0.02,
                          progress_bar=TRUE)
   abc_out<-abc(sum_stat_observed, ABC_rej$param, ABC_rej$stats, tol=0.5, method="loclinear")
   
-  if (use_correction == FALSE) {
+  if (use_correction==FALSE) {
     sample = ABC_rej$param
   }
-  else if (use_correction=TRUE) {
+  else if (use_correction==TRUE) {
     sample = abc_out$adj.values
   }
   
@@ -138,14 +139,15 @@ find_n_bins_MRSSE <- function(band, n_bins_ME, nb_simul_ME=10000, tol_ME=0.02,
       abc_out_inner<-abc(sum_stat_observed, ABC_rej_inner$param, ABC_rej_inner$stats, tol=0.5, method="loclinear")
     
       # Make or not correction ##################
-      if (use_correction == FALSE) {
+      if (use_correction==FALSE) {
        new_sample = ABC_rej_inner$param
       }
-      else if (use_correction=TRUE) {
+      else if (use_correction==TRUE) {
        new_sample = abc_out_inner$adj.values
       }
       ###########################################
   
+      # TODO: Use scale(new_sample, scale=as.vector(prior_std_list))
       # Standardize #############################
       if (is.null(standard)) {
         for (col in seq(1, ncol(new_sample))) {
