@@ -177,7 +177,7 @@ find_n_bins_MRSSE <- function(band, n_bins_ME, nb_simul_ME=10000, tol_ME=0.05,
     }
     
     # Average RSSE for each of n_obs runs
-    print(c("MRSSE for ", i, " out of ", n_bins_max, " is ", MRSSE))
+    print(c("MRSSE for ", i, " out of ", n_bins_max, " is ", MRSSE / nrow(sample)))
     MRSSE_output[i] <- MRSSE / nrow(sample)
   }
   return(MRSSE_output)
