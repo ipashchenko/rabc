@@ -120,6 +120,26 @@ find_n_bins_MRSSE <- function(band, n_bins_ME, nb_simul_ME=10000, tol_ME=0.05,
   # Choose only n_obs number of parameter vectors from simulated data
   sample <- sample[sample(nrow(sample),size=n_obs,replace=FALSE),]
   
+  # TODO: Use scale(sample, scale=as.vector(prior_std_list))
+  # Standardize #############################
+  #  if (is.null(standard)) {
+  #    for (col in seq(1, ncol(sample))) {
+  #      sample[,col]<-(sample[,col]-mean(sample[,col]))/sd(sample[,col])
+  #    } 
+  #  }
+  # Keep it unstandardized to create new data sets
+  params <- sample[]
+  
+  if (standard==TRUE) {
+    # Standardize a-la Ewan et al. 
+    # prior_std_list - list of std of priors for parameters
+    # (0.15, 0.15, 6./sqrt(12.), 7.5/sqrt(12.), 29./sqrt(12.))
+    for (col in seq(1, ncol(sample))) {
+      sample[,col]<-sample[,col]/prior_std_list[col]
+    }
+  }
+  ###########################################
+  
   # For each number of bins (for each summary statistics S) - make ABC
   for (i in seq(1, n_bins_max)) {
     print(c("Begining to check sum.statistics with ", i, " n_bins......"))
@@ -129,7 +149,7 @@ find_n_bins_MRSSE <- function(band, n_bins_ME, nb_simul_ME=10000, tol_ME=0.05,
     # make ABC and find RSSE
     for (j in seq(1, nrow(sample))) {
       print(c("Using ", j, " of ", nrow(sample), " simulated parameter vectors"))
-      par <- sample[j,]
+      par <- params[j,]
       new_data <- create_survey(data, mu_logv0=par[1], std_logv0=par[2],
                                 mu_logtb=par[3], std_logtb=par[4], alpha_e=5,
                                 beta_e=par[5])
@@ -155,12 +175,12 @@ find_n_bins_MRSSE <- function(band, n_bins_ME, nb_simul_ME=10000, tol_ME=0.05,
   
       # TODO: Use scale(new_sample, scale=as.vector(prior_std_list))
       # Standardize #############################
-      if (is.null(standard)) {
-        for (col in seq(1, ncol(new_sample))) {
-          new_sample[,col]<-(new_sample[,col]-mean(new_sample[,col]))/sd(new_sample[,col])
-        } 
-      }
-      else if (standard=='eaton') {
+      # if (is.null(standard)) {
+      #   for (col in seq(1, ncol(new_sample))) {
+      #     new_sample[,col]<-(new_sample[,col]-mean(new_sample[,col]))/sd(new_sample[,col])
+      #   } 
+      # }
+      if (standard==TRUE) {
         # Standardize a-la Ewan et al. 
         # prior_std_list - list of std of priors for parameters
         # (0.15, 0.15, 6./sqrt(12.), 7.5/sqrt(12.), 29./sqrt(12.))
@@ -171,7 +191,8 @@ find_n_bins_MRSSE <- function(band, n_bins_ME, nb_simul_ME=10000, tol_ME=0.05,
       ###########################################
       
       # Find RSSE ###############################
-      RSSE <- sqrt(sum((t(apply(new_sample, 1, '-', par)))**2) / nrow(new_sample))
+      # Here both new_sample and sample are standardized
+      RSSE <- sqrt(sum((t(apply(new_sample, 1, '-', sample[j,])))**2) / nrow(new_sample))
       print(c("RSSE for ", j, " out of ", nrow(sample), " is ", RSSE))
       MRSSE <- MRSSE + RSSE
     }
