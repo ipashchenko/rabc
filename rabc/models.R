@@ -58,31 +58,52 @@ model1 <- function(data, borders) {
 # (mu_logv0, std_logv0, mu_logtb, std_logtb, beta_e)
 # Example:
 # x <- c(-0.43, 0.94, 11.8, 2.1, 5.)
-model2 <- function(data, borders) {
+# model2 <- function(data, borders) {
+#   function(x) {
+#     fractions <- vector(length=length(borders)-1)
+#     for (i in seq(1, length(borders)-1)) {
+#       subdata<-subset(data, bl>borders[i] & bl<borders[i+1])
+#       # Size of sample in current bin of baselines
+#       size<-length(subdata$bl)
+#       # Generate sample of sources
+#       mu_logv0<-x[1]
+#       std_logv0<-x[2]
+#       mu_logtb<-x[3]
+#       std_logtb<-x[4]
+#       beta_e<-x[5]
+#       logv0 = rnorm(size, mu_logv0, std_logv0)
+#       logtb = rnorm(size, mu_logtb, std_logtb)
+#       e = rbeta(size, 5, beta_e)
+#       dfi = runif(size, 0, pi/2)
+#       fluxes<-flux_ell(cbind(subdata$bl, exp(logv0), 10**(logtb), e, dfi))
+#       # Count detections
+#       detections<-subset(subdata, fluxes>5.*subdata$s_thr)
+#       fractions[i]<-as.double(length(detections$bl))/size
+#     }
+#     return(fractions)
+#   }
+# }
+
+get.probs <- function(data) {
+  logit <- glm(status ~ bl, data=data, family="binomial")
+  probs <- 1./(1. + exp(-logit$coefficients[1]) - logit$coefficients[2] * data$bl)
+  return(probs)
+}
+
+model2 <- function(data) {
+  probs <- get.probs(data)
   function(x) {
-    fractions <- vector(length=length(borders)-1)
-    for (i in seq(1, length(borders)-1)) {
-      subdata<-subset(data, bl>borders[i] & bl<borders[i+1])
-      # Size of sample in current bin of baselines
-      size<-length(subdata$bl)
-      # Generate sample of sources
-      mu_logv0<-x[1]
-      std_logv0<-x[2]
-      mu_logtb<-x[3]
-      std_logtb<-x[4]
-      beta_e<-x[5]
-      logv0 = rnorm(size, mu_logv0, std_logv0)
-      logtb = rnorm(size, mu_logtb, std_logtb)
-      e = rbeta(size, 5, beta_e)
-      dfi = runif(size, 0, pi/2)
-      fluxes<-flux_ell(cbind(subdata$bl, exp(logv0), 10**(logtb), e, dfi))
-      # Count detections
-      detections<-subset(subdata, fluxes>5.*subdata$s_thr)
-      fractions[i]<-as.double(length(detections$bl))/size
-    }
-    return(fractions)
+    new_data <- create_survey(data, mu_logv0=x[1], std_logv0=x[2],
+                              mu_logtb=x[3], std_logtb=x[4], alpha_e=5.,
+                              beta_e=x[5])
+    new_probs <- get.probs(new_data)
+    probs_diff <- abs(new_probs - probs)
+    sum.stat <- median(probs_diff)
+    print(c("sum.stat for", x, " is ", sum.stat))
+    return(sum.stat)
   }
 }
+
 
 # Model with each single source having the same parameters
 # even if it is observed on different baselines

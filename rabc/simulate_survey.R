@@ -2,6 +2,8 @@
 # columns return data frame with simulated survey.
 create_survey<-function(data, mu_logv0=-0.4, std_logv0=0.3, mu_logtb=12.0, std_logtb=0.7, alpha_e=33, beta_e=50) {
   # Set seed for reproducibility
+  old <- .Random.seed
+  on.exit( { .Random.seed <<- old } )
   set.seed(1)
   # Number of observations in survey
   n_obs = length(data$bl)
@@ -35,8 +37,8 @@ create_survey<-function(data, mu_logv0=-0.4, std_logv0=0.3, mu_logtb=12.0, std_l
   # Calculate observed fluxes for sample
   new_data$fluxes<-flux_ell(cbind(new_data$bl, exp(new_data$logv0), 10**(new_data$logtb), new_data$e, new_data$angles))
   # Update statuses
-  new_data$status[new_data$fluxes > 5*new_data$s_thr] = 'y'
-  new_data$status[new_data$fluxes < 5*new_data$s_thr] = 'n'
+  new_data$status[new_data$fluxes > 5*new_data$s_thr] = 1.
+  new_data$status[new_data$fluxes < 5*new_data$s_thr] = 0.
   # Delete some columns
   new_data$angles <- NULL
   new_data$logv0 <- NULL
