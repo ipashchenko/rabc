@@ -85,11 +85,17 @@ model1 <- function(data, borders) {
 # }
 
 get.probs <- function(data) {
-  logit <- glm(status ~ bl, data=data, family="binomial")
-  probs <- 1./(1. + exp(-logit$coefficients[1]) - logit$coefficients[2] * data$bl)
+  my.logit <- glm(status ~ bl, data=data, family="binomial")
+  probs <- 1./(1. + exp(-my.logit$coefficients[1]) - my.logit$coefficients[2] * data$bl)
   return(probs)
 }
 
+get.probs.gam <- function(data) {
+  my.logit <- gam(status ~ lo(bl), data=data, family="binomial")
+  return(my.logit$fitted.values)
+}
+
+source("/home/ilya/code/rabc/rabc/simulate_survey.R")
 model2 <- function(data) {
   probs <- get.probs(data)
   function(x) {
@@ -99,7 +105,21 @@ model2 <- function(data) {
     new_probs <- get.probs(new_data)
     probs_diff <- abs(new_probs - probs)
     sum.stat <- median(probs_diff)
-    print(c("sum.stat for", x, " is ", sum.stat))
+    # print(c("sum.stat for", x, " is ", sum.stat))
+    return(sum.stat)
+  }
+}
+
+model22 <- function(data) {
+  probs <- get.probs(data)
+  function(x) {
+    new_data <- create_survey(data, mu_logv0=x[1], std_logv0=x[2],
+                              mu_logtb=x[3], std_logtb=x[4], alpha_e=5.,
+                              beta_e=x[5])
+    new_probs <- get.probs(new_data)
+    probs_diff <- new_probs - probs
+    sum.stat <- sqrt(sum(probs_diff**2))
+    # print(c("sum.stat for", x, " is ", sum.stat))
     return(sum.stat)
   }
 }
@@ -128,7 +148,7 @@ model3 <- function(data, borders) {
     logtb = rnorm(n_s, mu_logtb, std_logtb)
     e = rbeta(n_s, 5, beta_e)
     sources_params <- data.frame(source=sources, logv0=logv0, logtb=logtb, e=e)
-  
+
     for (i in seq(1, length(borders)-1)) {
       # set seed for the same angles
       subdata<-subset(data, bl>borders[i] & bl<borders[i+1])
@@ -145,7 +165,7 @@ model3 <- function(data, borders) {
         tb[j] = 10**(sources_params$logtb[sources_params$source == sources_in_bin[j]])
         e[j] = sources_params$e[sources_params$source == sources_in_bin[j]]
       }
-    
+
       fluxes<-flux_ell(cbind(subdata$bl, v0, tb, e, dfi))
       # Count detections
       detections<-subset(subdata, fluxes>5.*subdata$s_thr)
